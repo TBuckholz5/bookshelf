@@ -1,12 +1,12 @@
-use config::Config;
+use std::env;
 
 use crate::error::AppError;
 
 pub struct EnvConfig {
     pub server_host: String,
-    pub server_port: i64,
+    pub server_port: String,
     pub db_host: String,
-    pub db_port: i64,
+    pub db_port: String,
     pub db_name: String,
     pub db_password: String,
     pub db_user: String,
@@ -15,18 +15,15 @@ pub struct EnvConfig {
 
 impl EnvConfig {
     pub fn load() -> Result<Self, AppError> {
-        let settings = Config::builder()
-            .add_source(config::Environment::default())
-            .add_source(config::File::with_name(".env"))
-            .build()?;
-        let server_host = settings.get_string("SERVER_HOST")?;
-        let server_port = settings.get_int("SERVER_PORT")?;
-        let db_host = settings.get_string("DATABASE_HOST")?;
-        let db_port = settings.get_int("DATABASE_PORT")?;
-        let db_name = settings.get_string("DATABASE_NAME")?;
-        let db_password = settings.get_string("DATABASE_PASSWORD")?;
-        let db_sslmode = settings.get_string("DATABASE_SSLMODE")?;
-        let db_user = settings.get_string("DATABASE_USER")?;
+        dotenv::dotenv()?;
+        let server_host = env::var("SERVER_HOST")?;
+        let server_port = env::var("SERVER_PORT")?;
+        let db_host = env::var("DATABASE_HOST")?;
+        let db_port = env::var("DATABASE_PORT")?;
+        let db_name = env::var("DATABASE_NAME")?;
+        let db_password = env::var("DATABASE_PASSWORD")?;
+        let db_sslmode = env::var("DATABASE_SSLMODE")?;
+        let db_user = env::var("DATABASE_USER")?;
         Ok(Self {
             server_host,
             server_port,

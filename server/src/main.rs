@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&format!(
-            "postgres://{}:{}@{}:{}/{}?sslmode={}",
+            "postgresql://{}:{}@{}:{}/{}?sslmode={}",
             env_config.db_user,
             env_config.db_password,
             env_config.db_host,
