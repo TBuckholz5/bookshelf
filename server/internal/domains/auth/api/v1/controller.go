@@ -2,9 +2,11 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 
+	"github.com/TBuckholz5/bookshelf/internal/domains/auth/models"
 	"github.com/TBuckholz5/bookshelf/internal/domains/auth/service"
 	"github.com/go-playground/validator/v10"
 	"golang.org/x/oauth2"
@@ -39,7 +41,6 @@ func (c *AuthController) GoogleCallback(w http.ResponseWriter, r *http.Request) 
 
 	code := r.URL.Query().Get("code")
 
-	// Exchange code for token.
 	token, err := c.googleOAuthConfig.Exchange(context.Background(), code)
 	if err != nil {
 		http.Error(w, "Code-Token Exchange Failed", http.StatusInternalServerError)
@@ -54,15 +55,30 @@ func (c *AuthController) GoogleCallback(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	defer func() { _ = resp.Body.Close() }()
-
 	userData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		http.Error(w, "JSON Parsing Failed", http.StatusInternalServerError)
 		return
 	}
 
+	var userInfo models.OAuthUserInfo
+	if err := json.Unmarshal(userData, &userInfo); err != nil {
+		http.Error(w, "Error unmarshaling user info", http.StatusInternalServerError)
+		return
+	}
+
+	jwtToken, err := c.service.Login(&models.UserLoginRequestInfo{
+		OAuthType:        models.Google,
+		ExternalUserInfo: &userInfo,
+		Token:            token,
+	})
+	if err != nil {
+		http.Error(w, "Service Error", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(userData); err != nil {
+	if err := json.NewEncoder(w).Encode(models.UserLoginResponse{Token: jwtToken}); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

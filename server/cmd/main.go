@@ -12,8 +12,10 @@ import (
 	authServ "github.com/TBuckholz5/bookshelf/internal/domains/auth/service"
 	"github.com/TBuckholz5/bookshelf/internal/routing"
 	"github.com/TBuckholz5/bookshelf/internal/routing/middleware"
+
 	// "github.com/TBuckholz5/bookshelf/internal/routing/middleware/auth"
 	"github.com/TBuckholz5/bookshelf/internal/routing/middleware/logging"
+	"github.com/TBuckholz5/bookshelf/internal/util/aes"
 	"github.com/TBuckholz5/bookshelf/internal/util/jwt"
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -45,12 +47,13 @@ func main() {
 
 	// Define dependencies.
 	jwtService := jwt.NewJwtService([]byte(config.JWTSecret))
+	aesService := aes.NewAesService([]byte(config.AESSecret))
 	validator := validator.New()
 	// authMiddleware := auth.NewAuthMiddleware(jwtService)
 	loggingMiddleware := logging.NewLoggingMiddleware()
 
 	authRepository := authRepo.NewAuthRepository(pool)
-	authService := authServ.NewAuthService(authRepository, jwtService)
+	authService := authServ.NewAuthService(authRepository, jwtService, aesService)
 	authController := authApi.NewAuthController(authService, validator, config.GoogleLoginConfig)
 
 	// Register routes.

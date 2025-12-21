@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -12,6 +13,7 @@ type Config struct {
 	ServerPort        string
 	ServerHost        string
 	JWTSecret         string
+	AESSecret         string
 	DBUser            string
 	DBPort            string
 	DBName            string
@@ -30,6 +32,7 @@ func LoadConfig() (*Config, error) {
 	serverPort := os.Getenv("SERVER_PORT")
 	serverHost := os.Getenv("SERVER_HOST")
 	jwtSecret := os.Getenv("JWT_SECRET")
+	aesSecret := os.Getenv("ENCRYPT_SECRET")
 
 	databasePort := os.Getenv("DATABASE_PORT")
 	databaseUser := os.Getenv("DATABASE_USER")
@@ -42,6 +45,7 @@ func LoadConfig() (*Config, error) {
 		ServerPort: serverPort,
 		ServerHost: serverHost,
 		JWTSecret:  jwtSecret,
+		AESSecret:  aesSecret,
 		DBUser:     databaseUser,
 		DBPort:     databasePort,
 		DBName:     databaseName,
@@ -49,7 +53,7 @@ func LoadConfig() (*Config, error) {
 		DBPassword: databasePassword,
 		SslMode:    databaseSslMode,
 		GoogleLoginConfig: oauth2.Config{
-			RedirectURL:  "http://localhost:8081/api/v1/auth/google_callback",
+			RedirectURL:  fmt.Sprintf("http://%s:%s/api/v1/auth/google_callback", serverHost, serverPort),
 			ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 			ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 			Scopes: []string{
