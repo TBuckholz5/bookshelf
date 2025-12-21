@@ -6,11 +6,10 @@ services:
       POSTGRES_DB: ${DATABASE_NAME}
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-      PGPORT: ${DATABASE_PORT}
     ports:
-      - "5434:${DATABASE_PORT}"
+      - "5434:5433"
     volumes:
-      - postgres_data_bookshelf:/var/lib/postgresql/data
+      - bookshelf_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
       interval: 5s
@@ -22,11 +21,10 @@ services:
     container_name: bookshelf-server
     image: bookshelf-server:latest
     ports:
-      - "3000:3000"
+      - "8081:8081"
     depends_on:
       postgres:
         condition: service_healthy
 
 volumes:
-  postgres_data_bookshelf:
-
+  bookshelf_data:

@@ -1,11 +1,10 @@
 .PHONY: build clean
 
 run-server:
-	cargo run
+	go run cmd/*.go
 
 run-docker:
 	docker-compose up --build
 
 test:
-	cargo test
-
+	go test ./...

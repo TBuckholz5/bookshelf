@@ -1,14 +1,35 @@
-FROM rust:1.91 AS builder
+FROM golang:1.24-alpine AS builder
+
 WORKDIR /app
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code.
 COPY . .
-RUN cargo build --release
 
+# Build the application.
+RUN CGO_ENABLED=0 go build -o main ./cmd
 
-FROM debian:bookworm-slim
-WORKDIR /app
-COPY --from=builder /app/target/release/server .
-COPY .en[v] ./
-COPY migrations ./
-EXPOSE 3000
-CMD ["./server"]
+# Final stage
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS requests.
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy the binary from builder stage
+COPY --from=builder /app/main .
+
+# Copy the .env.toml file
+COPY .env* ./
+COPY migrations/ ./migrations/
+
+# Expose port 8081
+EXPOSE 8081
+
+# Run the binary
+CMD ["./main"]
 
