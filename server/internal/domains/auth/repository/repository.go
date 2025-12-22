@@ -9,7 +9,8 @@ import (
 type Repository interface {
 	UpsertUser(req *UpsertUserRequest) (*User, error)
 	CreateSession(req *CreateSessionRequest) (*Session, error)
-	RevokeOldSessions(userID string) (*Session, error)
+	UpdateSession(req *UpdateSessionRequest) error
+	GetSessionForTokenHash(tokenHash []byte) (*Session, error)
 }
 
 type AuthRepository struct {
@@ -44,27 +45,39 @@ func (r *AuthRepository) UpsertUser(req *UpsertUserRequest) (*User, error) {
 }
 
 func (r *AuthRepository) CreateSession(req *CreateSessionRequest) (*Session, error) {
-	query := `INSERT INTO sessions (user_id, expires_at) 
-		VALUES ($1, $2) 
-		RETURNING id, user_id, expires_at, created_at, updated_at, is_revoked;`
-	row := r.pool.QueryRow(context.Background(), query, req.UserID, req.ExpiresAt)
+	query := `INSERT INTO sessions (user_id, refresh_token_hash, refresh_token_expire_at) 
+		VALUES ($1, $2, $3) 
+		RETURNING id, user_id, refresh_token_hash, refresh_token_expire_at, 
+		created_at, updated_at, revoked_at;`
+	row := r.pool.QueryRow(context.Background(), query, req.UserID,
+		req.RefreshTokenHash, req.RefreshTokenExpiresAt)
 	var session Session
-	err := row.Scan(&session.ID, &session.UserID, &session.ExpiresAt, &session.CreatedAt, &session.UpdatedAt,
-		&session.IsRevoked)
+	err := row.Scan(&session.ID, &session.UserID, &session.RefreshTokenHash,
+		&session.RefreshTokenExpiresAt, &session.CreatedAt, &session.UpdatedAt, &session.RevokedAt)
 	if err != nil {
 		return nil, err
 	}
 	return &session, nil
 }
 
-func (r *AuthRepository) RevokeOldSessions(userID string) error {
-	query := `UPDATE sessions
-		SET is_revoked = TRUE
-		WHERE user_id = $1;`
-	_, err := r.pool.Exec(context.Background(), query, userID)
-	if err != nil {
-		return err
-	}
+func (r *AuthRepository) UpdateSession(req *UpdateSessionRequest) error {
+	query := `UPDATE sessions SET refresh_token_hash = $1, refresh_token_expire_at = $2 
+			WHERE id = $3`
+	_, err := r.pool.Exec(context.Background(), query, req.RefreshTokenHash, req.RefreshTokenExpiresAt,
+		req.ID)
+	return err
+}
 
-	return nil
+func (r *AuthRepository) GetSessionForTokenHash(tokenHash []byte) (*Session, error) {
+	query := `SELECT id, user_id, refresh_token_hash, refresh_token_expire_at, 
+		created_at, updated_at, revoked_at FROM sessions WHERE 
+		refresh_token_hash = $1`
+	row := r.pool.QueryRow(context.Background(), query, tokenHash)
+	var session Session
+	err := row.Scan(&session.ID, &session.UserID, &session.RefreshTokenHash,
+		&session.RefreshTokenExpiresAt, &session.CreatedAt, &session.UpdatedAt, &session.RevokedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &session, nil
 }

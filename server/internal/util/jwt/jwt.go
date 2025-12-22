@@ -9,9 +9,16 @@ import (
 
 const ISSUER = "bookshelf"
 
+type JwtClaims struct {
+	SessionID string
+	UserID    string
+	Expiry    time.Time
+	Issuer    string
+}
+
 type JwtService interface {
-	GenerateJwt(userID string, exp time.Time) (string, error)
-	ValidateJwt(tokenString string) (string, error)
+	GenerateJwt(claims JwtClaims) (string, error)
+	ValidateJwt(tokenString string) (JwtClaims, error)
 }
 
 type Jwt struct {
@@ -24,14 +31,16 @@ func NewJwtService(jwtSecret []byte) *Jwt {
 	}
 }
 
-func (j *Jwt) GenerateJwt(userID string, exp time.Time) (string, error) {
-	claims := jwt.MapClaims{
-		"exp": exp.Unix(),
-		"sub": userID,
-		"iss": ISSUER,
+func (j *Jwt) GenerateJwt(claims JwtClaims) (string, error) {
+	jwtClaims := jwt.MapClaims{
+		"exp":      claims.Expiry.Unix(),
+		"sub":      claims.UserID,
+		"iss":      ISSUER,
+		"sid":      claims.SessionID,
+		"issuedAt": time.Now().Unix(),
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwtClaims)
 
 	signedToken, err := token.SignedString(j.secret)
 	if err != nil {
@@ -40,31 +49,51 @@ func (j *Jwt) GenerateJwt(userID string, exp time.Time) (string, error) {
 	return signedToken, nil
 }
 
-func (j *Jwt) ValidateJwt(tokenString string) (string, error) {
+func (j *Jwt) ValidateJwt(tokenString string) (JwtClaims, error) {
+	claims, err := parseToken(j.secret, tokenString)
+	if err != nil {
+		return JwtClaims{}, err
+	}
+	if claims.Issuer != ISSUER {
+		return JwtClaims{}, fmt.Errorf("invalid token issuer")
+	}
+	if time.Now().After(claims.Expiry) {
+		return JwtClaims{}, fmt.Errorf("token has expired")
+	}
+	return claims, nil
+}
+
+func parseToken(secret []byte, tokenString string) (JwtClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		return j.secret, nil
+		return secret, nil
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	if err != nil {
-		return "", err
+		return JwtClaims{}, fmt.Errorf("could not parse jwt")
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return "", fmt.Errorf("invalid token claims")
-	}
-	if claims["iss"] != ISSUER {
-		return "", fmt.Errorf("invalid token issuer")
-	}
-	expValue, ok := claims["exp"].(float64)
-	if !ok {
-		return "", fmt.Errorf("exp claim is missing or not a number")
-	}
-	expirationTime := time.Unix(int64(expValue), 0)
-	if time.Now().After(expirationTime) {
-		return "", fmt.Errorf("token has expired")
+		return JwtClaims{}, fmt.Errorf("invalid token claims")
 	}
 	sub, ok := claims["sub"].(string)
 	if !ok {
-		return "", fmt.Errorf("sub not a string")
+		return JwtClaims{}, fmt.Errorf("sub not a string")
 	}
-	return sub, nil
+	sid, ok := claims["sid"].(string)
+	if !ok {
+		return JwtClaims{}, fmt.Errorf("sid not a string")
+	}
+	expValue, ok := claims["exp"].(float64)
+	if !ok {
+		return JwtClaims{}, fmt.Errorf("exp claim is missing or not a number")
+	}
+	issuer, ok := claims["iss"].(string)
+	if !ok {
+		return JwtClaims{}, fmt.Errorf("iss is not a string")
+	}
+	return JwtClaims{
+		UserID:    sub,
+		SessionID: sid,
+		Expiry:    time.Unix(int64(expValue), 0),
+		Issuer:    issuer,
+	}, nil
 }

@@ -13,11 +13,9 @@ import (
 	"github.com/TBuckholz5/bookshelf/internal/routing"
 	"github.com/TBuckholz5/bookshelf/internal/routing/middleware"
 
-	// "github.com/TBuckholz5/bookshelf/internal/routing/middleware/auth"
 	"github.com/TBuckholz5/bookshelf/internal/routing/middleware/logging"
 	"github.com/TBuckholz5/bookshelf/internal/util/aes"
 	"github.com/TBuckholz5/bookshelf/internal/util/jwt"
-	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -48,13 +46,13 @@ func main() {
 	// Define dependencies.
 	jwtService := jwt.NewJwtService([]byte(config.JWTSecret))
 	aesService := aes.NewAesService([]byte(config.AESSecret))
-	validator := validator.New()
-	// authMiddleware := auth.NewAuthMiddleware(jwtService)
 	loggingMiddleware := logging.NewLoggingMiddleware()
 
 	authRepository := authRepo.NewAuthRepository(pool)
 	authService := authServ.NewAuthService(authRepository, jwtService, aesService)
-	authController := authApi.NewAuthController(authService, validator, config.GoogleLoginConfig)
+	authController := authApi.NewAuthController(authService,
+		&config.GoogleLoginConfig, http.DefaultClient)
+	// authMiddleware := auth.NewAuthMiddleware(jwtService, authRepository)
 
 	// Register routes.
 	mux := http.NewServeMux()
@@ -73,13 +71,19 @@ func main() {
 		Mux:     authMux,
 		Handler: http.HandlerFunc(authController.GoogleLogin),
 		Route:   "/google_login",
-		Method:  "GET",
+		Method:  "POST",
 	})
 	routing.RegisterRoute(routing.Config{
 		Mux:     authMux,
 		Handler: http.HandlerFunc(authController.GoogleCallback),
 		Route:   "/google_callback",
 		Method:  "GET",
+	})
+	routing.RegisterRoute(routing.Config{
+		Mux:     authMux,
+		Handler: http.HandlerFunc(authController.RefreshSession),
+		Route:   "/refresh",
+		Method:  "POST",
 	})
 
 	// Start server.

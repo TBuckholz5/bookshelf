@@ -1,6 +1,8 @@
 package models
 
-import "golang.org/x/oauth2"
+import (
+	"golang.org/x/oauth2"
+)
 
 const (
 	Google string = "Google"
@@ -19,5 +21,10 @@ type UserLoginRequestInfo struct {
 }
 
 type UserLoginResponse struct {
-	Token string `json:"token"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+}
+
+type UserRefreshRequest struct {
+	RefreshToken string `json:"refreshToken"`
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/TBuckholz5/bookshelf/internal/util/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -15,14 +16,14 @@ type mockService struct {
 	mock.Mock
 }
 
-func (m *mockService) GenerateJwt(userID string, exp time.Time) (string, error) {
-	args := m.Called(userID)
+func (m *mockService) GenerateJwt(claims jwt.JwtClaims) (string, error) {
+	args := m.Called(claims)
 	return args.String(0), args.Error(1)
 }
 
-func (m *mockService) ValidateJwt(tokenString string) (string, error) {
+func (m *mockService) ValidateJwt(tokenString string) (jwt.JwtClaims, error) {
 	args := m.Called(tokenString)
-	return args.Get(0).(string), args.Error(1)
+	return args.Get(0).(jwt.JwtClaims), args.Error(1)
 }
 
 func TestAuthMiddleware_Success(t *testing.T) {
@@ -30,7 +31,13 @@ func TestAuthMiddleware_Success(t *testing.T) {
 		mockServiceInstance = &mockService{}
 		middleware          = NewAuthMiddleware(mockServiceInstance)
 	)
-	mockServiceInstance.On("ValidateJwt", mock.Anything).Return("token", nil)
+	claims := jwt.JwtClaims{
+		SessionID: "session_test",
+		UserID:    "user_test",
+		Expiry:    time.Now(),
+		Issuer:    "bookshelf",
+	}
+	mockServiceInstance.On("ValidateJwt", mock.Anything).Return(claims, nil)
 
 	req, err := http.NewRequest("GET", "/protected", nil)
 	if err != nil {
@@ -41,7 +48,7 @@ func TestAuthMiddleware_Success(t *testing.T) {
 	rr := httptest.NewRecorder()
 	mockHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		assert.Equal(t, "token", r.Context().Value(CtxKeyUserID))
+		assert.Equal(t, claims, r.Context().Value(CtxKeyClaims))
 	}
 	handler := middleware.Wrap(http.HandlerFunc(mockHandler))
 
@@ -58,7 +65,7 @@ func TestAuthMiddleware_NoBearerPrefix(t *testing.T) {
 		mockServiceInstance = &mockService{}
 		middleware          = NewAuthMiddleware(mockServiceInstance)
 	)
-	mockServiceInstance.On("ValidateJwt", mock.Anything).Return("token", nil)
+	mockServiceInstance.On("ValidateJwt", mock.Anything).Return(jwt.JwtClaims{}, nil)
 
 	req, err := http.NewRequest("GET", "/protected", nil)
 	if err != nil {
@@ -85,7 +92,7 @@ func TestAuthMiddleware_AuthError(t *testing.T) {
 		mockServiceInstance = &mockService{}
 		middleware          = NewAuthMiddleware(mockServiceInstance)
 	)
-	mockServiceInstance.On("ValidateJwt", mock.Anything).Return("token", fmt.Errorf("invalid token"))
+	mockServiceInstance.On("ValidateJwt", mock.Anything).Return(jwt.JwtClaims{}, fmt.Errorf("invalid token"))
 
 	req, err := http.NewRequest("GET", "/protected", nil)
 	if err != nil {

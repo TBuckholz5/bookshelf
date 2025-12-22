@@ -14,6 +14,13 @@ type UpsertUserRequest struct {
 }
 
 type CreateSessionRequest struct {
-	UserID    string
-	ExpiresAt time.Time
+	UserID                string
+	RefreshTokenHash      []byte
+	RefreshTokenExpiresAt time.Time
+}
+
+type UpdateSessionRequest struct {
+	ID                    string
+	RefreshTokenHash      []byte
+	RefreshTokenExpiresAt time.Time
 }

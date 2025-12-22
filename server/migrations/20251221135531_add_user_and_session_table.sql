@@ -23,10 +23,9 @@ CREATE TABLE sessions (
 
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 
-    expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    is_revoked BOOLEAN DEFAULT FALSE
+    revoked_at TIMESTAMPTZ DEFAULT NULL 
 );
 
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
