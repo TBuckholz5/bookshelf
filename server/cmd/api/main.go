@@ -23,7 +23,7 @@ import (
 
 func main() {
 	// Read env config.
-	config, err := config.LoadConfig()
+	config, err := config.LoadApiConfig()
 	if err != nil {
 		log.Fatal("Cannot load config:", err)
 	}

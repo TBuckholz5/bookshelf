@@ -9,7 +9,7 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-type Config struct {
+type ApiConfig struct {
 	ServerPort        string
 	ServerHost        string
 	JWTSecret         string
@@ -23,7 +23,7 @@ type Config struct {
 	GoogleLoginConfig oauth2.Config
 }
 
-func LoadConfig() (*Config, error) {
+func LoadApiConfig() (*ApiConfig, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func LoadConfig() (*Config, error) {
 	databasePassword := os.Getenv("DATABASE_PASSWORD")
 	databaseSslMode := os.Getenv("DATABASE_SSLMODE")
 
-	return &Config{
+	return &ApiConfig{
 		ServerPort: serverPort,
 		ServerHost: serverHost,
 		JWTSecret:  jwtSecret,
