@@ -17,8 +17,9 @@ services:
       timeout: 5s
       retries: 5
 
-  app:
-    build: .
+  api:
+    build:
+      dockerfile: docker/api.Dockerfile
     container_name: bookshelf-server
     image: bookshelf-server:latest
     ports:
@@ -26,6 +27,21 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  etl-worker:
+    build:
+      dockerfile: docker/etl-worker.Dockerfile
+    depends_on:
+      - rabbitmq
+
+  etl-batcher:
+    build:
+      dockerfile: docker/etl-worker.Dockerfile
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3-management
 
 volumes:
   bookshelf_data:

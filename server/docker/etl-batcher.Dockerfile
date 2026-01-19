@@ -10,13 +10,10 @@ RUN go mod download
 COPY . .
 
 # Build the application.
-RUN CGO_ENABLED=0 go build -o main ./cmd
+RUN CGO_ENABLED=0 go build -o main ./cmd/etl/batcher
 
 # Final stage
 FROM alpine:latest
-
-# Install ca-certificates for HTTPS requests.
-RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
@@ -25,11 +22,8 @@ COPY --from=builder /app/main .
 
 # Copy the .env.toml file
 COPY .env* ./
-COPY migrations/ ./migrations/
-
-# Expose port 8081
-EXPOSE 8081
 
 # Run the binary
 CMD ["./main"]
+
 

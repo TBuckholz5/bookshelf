@@ -1,7 +1,7 @@
 .PHONY: build clean
 
 run-server:
-	go run cmd/*.go
+	go run cmd/api/*.go
 
 run-docker:
 	docker-compose up --build
