@@ -25,14 +25,14 @@ func main() {
 	// Read env config.
 	config, err := config.LoadApiConfig()
 	if err != nil {
-		log.Fatal("Cannot load config:", err)
+		log.Panic("Cannot load config:", err)
 	}
 
 	// Connect to database.
 	pool, err := pgxpool.New(context.Background(), fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		config.DBUser, config.DBPassword, config.DBHost, config.DBPort, config.DBName, config.SslMode))
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err.Error())
 	}
 	defer pool.Close()
 
@@ -40,7 +40,7 @@ func main() {
 	db := stdlib.OpenDBFromPool(pool)
 	defer func() { _ = db.Close() }()
 	if err := goose.Up(db, "migrations"); err != nil {
-		log.Fatal(err)
+		log.Panic(err.Error())
 	}
 
 	// Define dependencies.
@@ -89,6 +89,6 @@ func main() {
 	// Start server.
 	fmt.Println("Starting server on port", config.ServerPort)
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", config.ServerPort), mux); err != nil {
-		log.Fatal(err)
+		log.Panic(err.Error())
 	}
 }
