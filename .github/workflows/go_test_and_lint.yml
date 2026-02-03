@@ -24,12 +24,12 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
-          working-directory: ./server
+          working-directory: ./server/api
 
       - name: Build
-        working-directory: ./server
+        working-directory: ./server/api
         run: go build -v ./...
 
       - name: Test
-        working-directory: ./server
+        working-directory: ./server/api
         run: go test -v ./...

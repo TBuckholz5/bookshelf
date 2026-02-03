@@ -1,29 +1,26 @@
-FROM golang:1.24-alpine AS builder
+FROM lukemathwalker/cargo-chef:latest-rust-1.93-alpine AS chef
+WORKDIR /app
+RUN apk add --no-cache musl-dev
+
+FROM chef AS planner
+COPY etl/ .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder 
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
+
+COPY etl/ .
+RUN cargo build --release --bin worker
+
+FROM alpine:latest AS runtime
+RUN apk add --no-cache ca-certificates
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
-RUN go mod download
+COPY --from=builder /app/target/release/worker ./worker
 
-# Copy source code.
-COPY . .
-
-# Build the application.
-RUN CGO_ENABLED=0 go build -o main ./cmd/etl/worker
-
-# Final stage
-FROM alpine:latest
-
-WORKDIR /root/
-
-# Copy the binary from builder stage
-COPY --from=builder /app/main .
-
-# Copy the .env.toml file
 COPY .env* ./
 
-# Run the binary
-CMD ["./main"]
-
+CMD ["./worker"]
 
