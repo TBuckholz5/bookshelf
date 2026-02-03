@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "worker",
+    "batcher",
+    "shared",
+]
+resolver = "2"

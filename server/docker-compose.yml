@@ -28,17 +28,17 @@ services:
       postgres:
         condition: service_healthy
 
-  etl-worker:
-    build:
-      dockerfile: docker/etl-worker.Dockerfile
-    depends_on:
-      - rabbitmq
-
-  etl-batcher:
-    build:
-      dockerfile: docker/etl-worker.Dockerfile
-    depends_on:
-      - rabbitmq
+  # etl-worker:
+  #   build:
+  #     dockerfile: docker/etl-worker.Dockerfile
+  #   depends_on:
+  #     - rabbitmq
+  #
+  # etl-batcher:
+  #   build:
+  #     dockerfile: docker/etl-worker.Dockerfile
+  #   depends_on:
+  #     - rabbitmq
 
   rabbitmq:
     image: rabbitmq:3-management
